@@ -52,3 +52,11 @@ struct UserStatisticsRequest: APIRequest {
         }
     }
 }
+
+struct HabitLeadStatisticsRequest: APIRequest {
+    typealias Response = UserStatistic
+    
+    var userID: String
+    
+    var path: String { "/userLeadingStats/\(userID)" }
+}
