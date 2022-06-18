@@ -51,7 +51,8 @@ class HabitDetailViewController: UIViewController {
     struct Model {
         var habitStatistics: HabitStatistics?
         var userCounts: [UserCount] {
-            habitStatistics?.userCounts ?? []
+//            habitStatistics?.userCounts ?? []
+            return [UserCount(user: User(bio: "", name: "kaiya", color: nil, id: "123"), count: 1)]
         }
     }
     
@@ -108,7 +109,8 @@ class HabitDetailViewController: UIViewController {
     
     func updateCollectionView() {
         // Set up View Model and apply Snapshot
-        let items = (self.model.habitStatistics?.userCounts.map { ViewModel.Item.single($0)} ?? []).sorted(by: >)
+        let items = (self.model.userCounts.map { ViewModel.Item.single($0)} ?? []).sorted(by: >)
+        print(items)
         dataSource.applySnapshotUsing(SectionIDS: [.remaining], itemsBySection: [.remaining: items])
     }
     
