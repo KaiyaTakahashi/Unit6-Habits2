@@ -19,6 +19,15 @@ class UserDetailViewController: UIViewController {
     var dataSource: DataSourceType!
     var model = Model()
     
+    var userStatisticsRequestTask: Task<Void, Never>? = nil
+    var habitLeadStatisticsRequestTask: Task<Void, Never>? = nil
+    var imageRequestTask: Task<Void, Never>? = nil
+    deinit {
+        userStatisticsRequestTask?.cancel()
+        habitLeadStatisticsRequestTask?.cancel()
+        imageRequestTask?.cancel()
+    }
+    
     enum ViewModel {
         enum Section: Hashable, Comparable {
             static func < (lhs: UserDetailViewController.ViewModel.Section, rhs: UserDetailViewController.ViewModel.Section) -> Bool {
@@ -59,5 +68,52 @@ class UserDetailViewController: UIViewController {
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update() {
+        userStatisticsRequestTask?.cancel()
+        userStatisticsRequestTask = Task {
+            if let userStats = try? await UserStatisticsRequest(userIDs: [user.id]).send(), userStats.count > 0 {
+                self.model.userStats = userStats[0]
+            } else {
+                self.model.userStats = nil
+            }
+            self.updateCollectionView()
+            
+            userStatisticsRequestTask = nil
+        }
+        
+        habitLeadStatisticsRequestTask?.cancel()
+        habitLeadStatisticsRequestTask = Task {
+            if let userStats = try? await HabitLeadStatisticsRequest(userID: user.id).send() {
+                self.model.leadingStats = userStats
+            } else {
+                self.model.leadingStats = nil
+            }
+            self.updateCollectionView()
+            
+            habitLeadStatisticsRequestTask = nil
+        }
+    }
+    
+    func updateCollectionView() {
+        guard let userStatistics = self.model.userStats, let leadingStatistics = self.model.leadingStats else { return }
+        
+        var itemsBySection = userStatistics.habitCounts.reduce(into: [ViewModel.Section: [ViewModel.Item]]()) { partialResult, habitCount in
+            let section: ViewModel.Section
+            
+            if leadingStatistics.habitCounts.contains(habitCount) {
+                section = .leading
+            } else {
+                section = .category(habitCount.habit.category)
+            }
+            partialResult[section, default: []].append(habitCount)
+        }
+        
+        itemsBySection = itemsBySection.mapValues { $0.sorted() }
+        
+        let sectionIDs = itemsBySection.keys.sorted()
+        
+        dataSource.applySnapshotUsing(SectionIDS: sectionIDs, itemsBySection: itemsBySection)
     }
 }
