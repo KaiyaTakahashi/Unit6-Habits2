@@ -31,6 +31,7 @@
 		D9B448AB284EBD4A00140B46 /* APIRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B448AA284EBD4A00140B46 /* APIRequest.swift */; };
 		D9B448AD2850013100140B46 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B448AC2850013100140B46 /* APIService.swift */; };
 		D9B448B028506AED00140B46 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9B448AF28506AED00140B46 /* Settings.swift */; };
+		D9D6789A28612F9D0065253E /* LoggedHabit.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9D6789928612F9C0065253E /* LoggedHabit.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -60,6 +61,7 @@
 		D9B448AA284EBD4A00140B46 /* APIRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIRequest.swift; sourceTree = "<group>"; };
 		D9B448AC2850013100140B46 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		D9B448AF28506AED00140B46 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		D9D6789928612F9C0065253E /* LoggedHabit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggedHabit.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,6 +150,7 @@
 				D952C4C62855655700F1B44B /* UserCount.swift */,
 				D944FC5A285E4599003EF4A5 /* UserStatistics.swift */,
 				D944FC5C285E45D9003EF4A5 /* HabitCount.swift */,
+				D9D6789928612F9C0065253E /* LoggedHabit.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -242,6 +245,7 @@
 			files = (
 				D952C4C72855655700F1B44B /* UserCount.swift in Sources */,
 				D9B44895284EA19200140B46 /* HomeCollectionViewController.swift in Sources */,
+				D9D6789A28612F9D0065253E /* LoggedHabit.swift in Sources */,
 				D92469752852B376005DA0AA /* UICollectionViewDiffableDataSource+ViewModel.swift in Sources */,
 				D948FA7C2854266C00182A1D /* NamedSectionHeaderView.swift in Sources */,
 				D9B448A6284EB64400140B46 /* Habit.swift in Sources */,

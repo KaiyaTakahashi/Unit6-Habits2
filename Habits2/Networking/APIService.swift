@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 struct HabitRequest: APIRequest {
     typealias Response = [String: Habit]
@@ -59,4 +60,26 @@ struct HabitLeadStatisticsRequest: APIRequest {
     var userID: String
     
     var path: String { "/userLeadingStats/\(userID)" }
+}
+
+struct ImageRequest: APIRequest {
+    typealias Response = UIImage
+    
+    var imageID: String
+    
+    var path: String { "/images/" + imageID }
+}
+
+struct LoggedHabitRequest: APIRequest {
+    typealias Response = Void
+    
+    var loggedHabit: LoggedHabit
+    
+    var path: String { "/loggedHabit" }
+    
+    var postData: Data {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return try! encoder.encode(loggedHabit)
+    }
 }

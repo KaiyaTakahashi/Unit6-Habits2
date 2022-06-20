@@ -14,11 +14,12 @@ class UserDetailViewController: UIViewController {
     @IBOutlet var bioLabel: UILabel!
     @IBOutlet var collectionView: UICollectionView!
     
-    var user: User!
+    
     typealias DataSourceType = UICollectionViewDiffableDataSource<ViewModel.Section, ViewModel.Item>
     var dataSource: DataSourceType!
+    var user: User!
     var model = Model()
-    
+    var updateTimer: Timer?
     var userStatisticsRequestTask: Task<Void, Never>? = nil
     var habitLeadStatisticsRequestTask: Task<Void, Never>? = nil
     var imageRequestTask: Task<Void, Never>? = nil
@@ -69,11 +70,26 @@ class UserDetailViewController: UIViewController {
         bioLabel.text = user.bio
         collectionView.register(NamedSectionHeaderView.self, forSupplementaryViewOfKind: SectionHeader.kind.identifier, withReuseIdentifier: SectionHeader.kind.identifier)
         
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true, block: { _ in
+            self.update()
+        })
+        imageRequestTask = Task {
+            if let image = try? await ImageRequest(imageID: user.id).send() {
+                self.profileImageView.image = image
+            }
+            imageRequestTask = nil
+        }
+        
         dataSource = createDataSource()
         collectionView.dataSource = dataSource
         collectionView.collectionViewLayout = createLayout()
         
         update()
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateTimer?.invalidate()
+        updateTimer = nil
     }
     
     init?(coder: NSCoder, user: User) {
