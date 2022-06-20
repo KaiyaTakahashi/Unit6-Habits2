@@ -53,11 +53,21 @@ class UserDetailViewController: UIViewController {
         var leadingStats: UserStatistic?
     }
     
+    enum SectionHeader: String {
+        case kind = "SectionHeader"
+        case reuse = "HeaderView"
+        
+        var identifier: String {
+            return rawValue
+        }
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
         userNameLabel.text = user.name
         bioLabel.text = user.bio
+        collectionView.register(NamedSectionHeaderView.self, forSupplementaryViewOfKind: SectionHeader.kind.identifier, withReuseIdentifier: SectionHeader.kind.identifier)
     }
     
     init?(coder: NSCoder, user: User) {
@@ -115,5 +125,34 @@ class UserDetailViewController: UIViewController {
         let sectionIDs = itemsBySection.keys.sorted()
         
         dataSource.applySnapshotUsing(SectionIDS: sectionIDs, itemsBySection: itemsBySection)
+    }
+    
+    func createDataSource() -> DataSourceType {
+        let dataSource = DataSourceType(collectionView: collectionView) { (collectionView, indexPath, itemIdentifier) -> UICollectionViewListCell in
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "HabitCount", for: indexPath) as! UICollectionViewListCell
+            var content = UIListContentConfiguration.subtitleCell()
+            content.text = itemIdentifier.habit.name
+            content.secondaryText = "\(itemIdentifier.count)"
+            content.prefersSideBySideTextAndSecondaryText = true
+            content.textProperties.font = .preferredFont(forTextStyle: .headline)
+            content.secondaryTextProperties.font = .preferredFont(forTextStyle: .body)
+            cell.contentConfiguration = content
+            return cell
+        }
+        
+        dataSource.supplementaryViewProvider = { (collectionView, category, indexPath) in
+            let header = collectionView.dequeueReusableSupplementaryView(ofKind: SectionHeader.kind.identifier, withReuseIdentifier: SectionHeader.reuse.identifier, for: indexPath) as! NamedSectionHeaderView
+            let section = dataSource.snapshot().sectionIdentifiers[indexPath.section]
+            
+            switch section {
+            case .leading:
+                header.nameLabel.text = "Leading"
+            case .category(let category):
+                header.nameLabel.text = category.name
+            }
+            return header
+        }
+        
+        return dataSource
     }
 }
