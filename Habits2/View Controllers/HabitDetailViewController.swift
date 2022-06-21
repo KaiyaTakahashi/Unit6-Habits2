@@ -51,8 +51,8 @@ class HabitDetailViewController: UIViewController {
     struct Model {
         var habitStatistics: HabitStatistics?
         var userCounts: [UserCount] {
-//            habitStatistics?.userCounts ?? []
-            return [UserCount(user: User(bio: "", name: "kaiya", color: nil, id: "123"), count: 1)]
+            habitStatistics?.userCounts ?? []
+//            return [UserCount(user: User(bio: "", name: "kaiya", color: nil, id: "123"), count: 1)]
         }
     }
     

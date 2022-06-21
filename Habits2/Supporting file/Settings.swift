@@ -9,6 +9,8 @@ import Foundation
 
 struct Settings {
     static var shared = Settings()
+    let currentUser = User(bio: nil, name: "Kaiya Takahashi", color: nil, id: "user41")
+    
     private let defaults = UserDefaults.standard
     var favouriteHabits: [Habit] {
         get {

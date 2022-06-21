@@ -77,7 +77,7 @@ struct LoggedHabitRequest: APIRequest {
     
     var path: String { "/loggedHabit" }
     
-    var postData: Data {
+    var postData: Data? {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         return try! encoder.encode(loggedHabit)
