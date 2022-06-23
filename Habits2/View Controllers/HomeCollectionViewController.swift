@@ -10,79 +10,252 @@ import UIKit
 private let reuseIdentifier = "Cell"
 
 class HomeCollectionViewController: UICollectionViewController {
+    
+    typealias DataSourceType = UICollectionViewDiffableDataSource<ViewModel.Section, ViewModel.Item>
+    
+    var updateTimer: Timer?
+    var userRequestTask: Task<Void, Never>? = nil
+    var habitRequestTask: Task<Void, Never>? = nil
+    var combinedStatisticsRequestTask: Task<Void, Never>? = nil
+    deinit {
+        userRequestTask?.cancel()
+        habitRequestTask?.cancel()
+        combinedStatisticsRequestTask?.cancel()
+    }
+    
+    enum ViewModel {
+        enum Section: Hashable {
+            case leaderBoard
+            case followedUsers
+        }
+        
+        enum Item: Hashable {
+            case leaderBoardHabit(name: String, leadingUserRanking: String?, secondaryUserRanking: String?)
+            case followedUser(_ user: User, message: String)
+            
+            func hash(into hasher: inout Hasher) {
+                switch self {
+                case .leaderBoardHabit(let name, _, _):
+                    hasher.combine(name)
+                case .followedUser(let user,_):
+                    hasher.combine(user)
+                }
+            }
+            
+            static func ==(_ lhs: Item, _ rhs: Item) -> Bool {
+                switch (lhs, rhs) {
+                case (.leaderBoardHabit(let lName, _, _), .leaderBoardHabit(let rName, _, _)):
+                    return lName == rName
+                case (.followedUser(let lUser, _), .followedUser(let rUser, _)):
+                    return lUser == rUser
+                default:
+                    return false
+                }
+            }
+        }
+    }
+    
+    struct Model {
+        var usersByID = [String: User]()
+        var habitsByName = [String: Habit]()
+        var habitStatistics = [HabitStatistics]()
+        var userStatistics = [UserStatistic]()
+        
+        var currentUser: User {
+            return Settings.shared.currentUser
+        }
+        
+        var users: [User] {
+            return Array(usersByID.values)
+        }
+        
+        var habits: [Habit] {
+            return Array(habitsByName.values)
+        }
+        
+        var followedUser: [User] {
+            return Array(usersByID.filter {
+                Settings.shared.followedUserIDs.contains($0.key)
+            }.values)
+        }
+        
+        var favouriteHabits: [Habit] {
+            return Settings.shared.favouriteHabits
+        }
+        
+        var nonfavouriteHabits: [Habit] {
+            return habits.filter { !favouriteHabits.contains($0) }
+        }
+    }
+    
+    var model = Model()
+    var dataSource: DataSourceType!
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
-
-        // Register cell classes
-        self.collectionView!.register(UICollectionViewCell.self, forCellWithReuseIdentifier: reuseIdentifier)
-
-        // Do any additional setup after loading the view.
+        
+        userRequestTask = Task {
+            if let users = try? await UserRequest().send() {
+                self.model.usersByID = users
+            }
+            self.updateCollectionView()
+            
+            userRequestTask = nil
+        }
+        
+        habitRequestTask = Task {
+            if let habits = try? await HabitRequest().send() {
+                self.model.habitsByName = habits
+            }
+            self.updateCollectionView()
+            
+            habitRequestTask = nil
+        }
+        
+        dataSource = createDataSource()
+        collectionView.dataSource = dataSource
+        collectionView.collectionViewLayout = createLayout()
     }
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using [segue destinationViewController].
-        // Pass the selected object to the new view controller.
-    }
-    */
-
-    // MARK: UICollectionViewDataSource
-
-    override func numberOfSections(in collectionView: UICollectionView) -> Int {
-        // #warning Incomplete implementation, return the number of sections
-        return 0
-    }
-
-
-    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of items
-        return 0
-    }
-
-    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier, for: indexPath)
     
-        // Configure the cell
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        update()
+        
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true, block: { _ in
+            self.update()
+        })
+    }
     
-        return cell
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        updateTimer?.invalidate()
+        updateTimer = nil
     }
 
-    // MARK: UICollectionViewDelegate
-
-    /*
-    // Uncomment this method to specify if the specified item should be highlighted during tracking
-    override func collectionView(_ collectionView: UICollectionView, shouldHighlightItemAt indexPath: IndexPath) -> Bool {
-        return true
+    func updateCollectionView() {
+        var sectionIDs = [ViewModel.Section]()
+        
+        let leaderboardItems = self.model.habitStatistics.filter { statistics in
+            return self.model.favouriteHabits.contains { $0.name == statistics.habit.name }
+        }.sorted {
+            $0.habit.name < $1.habit.name
+        }.reduce(into: [ViewModel.Item]()) { partialResult, statistic in
+            // Rank the user counts from highest to lowest
+            let rankedUserCounts = statistic.userCounts.sorted { $0.count > $1.count }
+            // Find index of the current user's count
+            let myCountIndex = rankedUserCounts.firstIndex { $0.user.id == self.model.currentUser.id }
+            
+            func userRankString(from userCount: UserCount) -> String {
+                var name = userCount.user.name
+                var ranking = ""
+                
+                if userCount.user.id == self.model.currentUser.id {
+                    name = "You"
+                    ranking = "\(ordinalString(from: myCountIndex!))"
+                }
+                return "\(name) \(userCount.count)" + ranking
+            }
+            
+            var leadingRanking: String?
+            var secondaryRanking: String?
+            
+            switch rankedUserCounts.count {
+            case 0:
+                leadingRanking = "Nobody yet!"
+            case 1:
+                let onlyCount = rankedUserCounts.first!
+                leadingRanking = userRankString(from: onlyCount)
+            default:
+                leadingRanking = userRankString(from: rankedUserCounts[0])
+                
+                if let myCountIndex = myCountIndex, myCountIndex != rankedUserCounts.startIndex {
+                    // If true, user's count and ranking should be displaed in secondary label.
+                    secondaryRanking = userRankString(from: rankedUserCounts[myCountIndex])
+                } else {
+                    // If false, the second-place user should be displayed in seconday label.
+                    secondaryRanking = userRankString(from: rankedUserCounts[1])
+                }
+            }
+            let leaderboardItem = ViewModel.Item.leaderBoardHabit(name: statistic.habit.name, leadingUserRanking: leadingRanking, secondaryUserRanking: secondaryRanking)
+            
+            partialResult.append(leaderboardItem)
+        }
+        sectionIDs.append(.leaderBoard)
+        let itemsBySection = [ViewModel.Section.leaderBoard: leaderboardItems]
+        
+        dataSource.applySnapshotUsing(SectionIDS: sectionIDs, itemsBySection: itemsBySection)
     }
-    */
-
-    /*
-    // Uncomment this method to specify if the specified item should be selected
-    override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
-        return true
-    }
-    */
-
-    /*
-    // Uncomment these methods to specify if an action menu should be displayed for the specified item, and react to actions performed on the item
-    override func collectionView(_ collectionView: UICollectionView, shouldShowMenuForItemAt indexPath: IndexPath) -> Bool {
-        return false
-    }
-
-    override func collectionView(_ collectionView: UICollectionView, canPerformAction action: Selector, forItemAt indexPath: IndexPath, withSender sender: Any?) -> Bool {
-        return false
-    }
-
-    override func collectionView(_ collectionView: UICollectionView, performAction action: Selector, forItemAt indexPath: IndexPath, withSender sender: Any?) {
     
+    static let formatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .ordinal
+        return f
+    }()
+    
+    func ordinalString(from number: Int) -> String {
+        return Self.formatter.string(from: NSNumber(integerLiteral: number + 1))!
     }
-    */
-
+    
+    func update() {
+        combinedStatisticsRequestTask?.cancel()
+        combinedStatisticsRequestTask = Task {
+            if let combinedStats = try? await CombinedStatsRequest().send() {
+                self.model.userStatistics = combinedStats.userStatistics
+                self.model.habitStatistics = combinedStats.habitStatistics
+            } else {
+                self.model.userStatistics = []
+                self.model.habitStatistics = []
+            }
+            self.updateCollectionView()
+            
+            combinedStatisticsRequestTask = nil
+        }
+    }
+    
+    func createDataSource() -> DataSourceType {
+        let dataSource = DataSourceType(collectionView: collectionView) { (collectionView, indexPath, itemIdentifier) -> UICollectionViewCell? in
+            switch itemIdentifier {
+            case .leaderBoardHabit(let name, leadingUserRanking: let leadingUserRanking, secondaryUserRanking: let secondaryUserRanking) :
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "LeaderBoardHabit", for: indexPath) as! LeaderboardHabitCollectionViewCell
+                cell.habitNameLabel.text = name
+                cell.leaderLabel.text = leadingUserRanking
+                cell.secondaryLabel.text = secondaryUserRanking
+                return cell
+            default:
+                return nil
+            }
+        }
+        return dataSource
+    }
+    
+    func createLayout() -> UICollectionViewCompositionalLayout {
+        let layout = UICollectionViewCompositionalLayout { (sectionIndex, environment) -> NSCollectionLayoutSection? in
+            switch self.dataSource.snapshot().sectionIdentifiers[sectionIndex]{
+            case .leaderBoard:
+                let leaderboardItemSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1),
+                    heightDimension: .fractionalHeight(0.3)
+                )
+                let leaderboardItem = NSCollectionLayoutItem(layoutSize: leaderboardItemSize)
+                
+                let verticalTrioSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(0.75),
+                    heightDimension: .fractionalWidth(0.75)
+                )
+                let leaderBoardverticalTrio = NSCollectionLayoutGroup.vertical(layoutSize: verticalTrioSize, subitem: leaderboardItem, count: 3)
+                leaderBoardverticalTrio.interItemSpacing = .fixed(10)
+                
+                let leaderboardSection = NSCollectionLayoutSection(group: leaderBoardverticalTrio)
+                leaderboardSection.interGroupSpacing = 20
+                leaderboardSection.orthogonalScrollingBehavior = .continuous
+                leaderboardItem.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 20, trailing: 20)
+                return leaderboardSection
+            default:
+                return nil
+            }
+        }
+        return layout
+    }
 }
