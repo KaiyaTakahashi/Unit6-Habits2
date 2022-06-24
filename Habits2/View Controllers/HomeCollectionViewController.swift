@@ -31,7 +31,7 @@ class HomeCollectionViewController: UICollectionViewController {
         
         enum Item: Hashable {
             case leaderBoardHabit(name: String, leadingUserRanking: String?, secondaryUserRanking: String?)
-            case followedUser(_ user: User, message: String)
+            case followedUser(_ user: User, _ message: String)
             
             func hash(into hasher: inout Hasher) {
                 switch self {
@@ -91,6 +91,7 @@ class HomeCollectionViewController: UICollectionViewController {
     var model = Model()
     var dataSource: DataSourceType!
 
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -134,6 +135,7 @@ class HomeCollectionViewController: UICollectionViewController {
         updateTimer = nil
     }
 
+    
     func updateCollectionView() {
         var sectionIDs = [ViewModel.Section]()
         
@@ -183,7 +185,57 @@ class HomeCollectionViewController: UICollectionViewController {
             partialResult.append(leaderboardItem)
         }
         sectionIDs.append(.leaderBoard)
-        let itemsBySection = [ViewModel.Section.leaderBoard: leaderboardItems]
+        var itemsBySection = [ViewModel.Section.leaderBoard: leaderboardItems]
+        
+        
+        var followedUserItems = [ViewModel.Item]()
+        
+        let currentUserLoggedHabits = loggedHabitNames(model.currentUser)
+        let favouriteLoggedHabits = Set(model.favouriteHabits.map { $0.name }).intersection(currentUserLoggedHabits)
+        
+      
+        for followedUser in model.followedUser.sorted(by: { $0.name < $1.name }) {
+            var message: String
+            
+            let followedUserLoggedHabits = loggedHabitNames(followedUser)
+            let commonLoggedHabits = followedUserLoggedHabits.intersection(currentUserLoggedHabits)
+            
+            if commonLoggedHabits.count > 0 {
+                let habitName: String
+                let commonFavouriteLoggedHabits = favouriteLoggedHabits.intersection(commonLoggedHabits)
+                
+                if commonFavouriteLoggedHabits.count > 0 {
+                    habitName = commonFavouriteLoggedHabits.sorted().first!
+                } else {
+                    habitName = commonLoggedHabits.sorted().first!
+                }
+                
+                let habitStats = model.habitStatistics.first { $0.habit.name == habitName }!
+                let rankedUserCounts = habitStats.userCounts.sorted { $0.count < $1.count }
+                let currentUserRanking = rankedUserCounts.firstIndex { $0.user == model.currentUser }!
+                let followedUserRanking = rankedUserCounts.firstIndex { $0.user == followedUser }!
+                
+                if currentUserRanking < followedUserRanking {
+                    message = "Currently #\(ordinalString(from: currentUserRanking)), behind you (#\(ordinalString(from: followedUserRanking))) in \(habitName). \nSend them a friendly reminder!"
+                } else if currentUserRanking > followedUserRanking {
+                    message = "Currently #\(ordinalString(from: currentUserRanking)), ahead of you (#\(ordinalString(from: followedUserRanking))) in \(habitName). \nYou might catch up with a little extra effort!"
+                } else {
+                    message = "You're tied at \(ordinalString(from: currentUserRanking)) in \(habitName)! Now's your chance to pull ahead."
+                }
+            } else if followedUserLoggedHabits.count > 0 {
+                let habitName = followedUserLoggedHabits.sorted().first!
+                let habitStats = model.habitStatistics.first { $0.habit.name == habitName }!
+                let rankedUserCounts = habitStats.userCounts.sorted { $0.count > $1.count }
+                let followedUserRanking = rankedUserCounts.firstIndex { $0.user == followedUser }!
+                
+                message = "Currently #\(ordinalString(from: followedUserRanking)), in \(habitName). \nMaybe You should give this habit a look."
+            } else {
+                message = "This user doesn't seem to have done much yet. Check in to see if they need any help getting started."
+            }
+            followedUserItems.append(.followedUser(followedUser, message))
+        }
+        sectionIDs.append(.followedUsers)
+        itemsBySection[.followedUsers] = followedUserItems
         
         dataSource.applySnapshotUsing(SectionIDS: sectionIDs, itemsBySection: itemsBySection)
     }
@@ -197,6 +249,17 @@ class HomeCollectionViewController: UICollectionViewController {
     func ordinalString(from number: Int) -> String {
         return Self.formatter.string(from: NSNumber(integerLiteral: number + 1))!
     }
+    
+    func loggedHabitNames(_ user: User) -> Set<String> {
+        var names = [String]()
+        
+        if let stats = model.userStatistics.first(where: { $0.user == user }) {
+            names = stats.habitCounts.map { $0.habit.name }
+        }
+        
+        return Set(names)
+    }
+    
     
     func update() {
         combinedStatisticsRequestTask?.cancel()
@@ -223,8 +286,11 @@ class HomeCollectionViewController: UICollectionViewController {
                 cell.leaderLabel.text = leadingUserRanking
                 cell.secondaryLabel.text = secondaryUserRanking
                 return cell
-            default:
-                return nil
+            case .followedUser(let user, let message):
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "FollowedUser", for: indexPath) as! FollowedUserCollectionViewCell
+                cell.primaryTextLabel.text = user.name
+                cell.secondaryTextLabel.text = message
+                return cell
             }
         }
         return dataSource
@@ -252,8 +318,13 @@ class HomeCollectionViewController: UICollectionViewController {
                 leaderboardSection.orthogonalScrollingBehavior = .continuous
                 leaderboardItem.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 20, trailing: 20)
                 return leaderboardSection
-            default:
-                return nil
+            case .followedUsers:
+                let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(100))
+                let followedUserItem = NSCollectionLayoutItem(layoutSize: itemSize)
+                let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(100))
+                let followedUserGroup = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitem: followedUserItem, count: 1)
+                let followedUserSection = NSCollectionLayoutSection(group: followedUserGroup)
+                return followedUserSection
             }
         }
         return layout
