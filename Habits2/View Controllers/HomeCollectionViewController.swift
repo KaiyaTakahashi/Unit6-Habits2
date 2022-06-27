@@ -9,6 +9,12 @@ import UIKit
 
 private let reuseIdentifier = "Cell"
 
+class SectionBackgroundView: UICollectionReusableView {
+    override func didMoveToSuperview() {
+        backgroundColor = .systemGray6
+    }
+}
+
 class HomeCollectionViewController: UICollectionViewController {
     
     typealias DataSourceType = UICollectionViewDiffableDataSource<ViewModel.Section, ViewModel.Item>
@@ -91,6 +97,38 @@ class HomeCollectionViewController: UICollectionViewController {
     var model = Model()
     var dataSource: DataSourceType!
 
+    enum SupplementaryView: String, CaseIterable, SupplementaryItem {
+        case leaderboardSectionHeader
+        case leaderboardBackground
+        case followedUserSectionHeader
+        
+        var reuseIdentifier: String {
+            return rawValue
+        }
+        
+        var viewKind: String {
+            return rawValue
+        }
+        
+        var viewClass: UICollectionReusableView.Type {
+            switch self {
+            case .leaderboardBackground:
+                return SectionBackgroundView.self
+            default:
+                return NamedSectionHeaderView.self
+            }
+        }
+        
+        var itemType: SupplementaryItemType {
+            switch self {
+            case .leaderboardBackground:
+                return .layoutDecorationView
+            default:
+                return .collectionSuplementaryView
+            }
+        }
+    }
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -111,6 +149,15 @@ class HomeCollectionViewController: UICollectionViewController {
             self.updateCollectionView()
             
             habitRequestTask = nil
+        }
+        
+        for supplementaryView in SupplementaryView.allCases {
+            print("")
+            print("viewKind: \(SupplementaryView.leaderboardBackground.viewKind)")
+            print("viewKind: \(SupplementaryView.leaderboardBackground.viewKind)")
+            print("viewKind: \(SupplementaryView.followedUserSectionHeader.viewKind)")
+            print("viewKind: \(SupplementaryView.followedUserSectionHeader.viewKind)")
+            supplementaryView.register(on: collectionView)
         }
         
         dataSource = createDataSource()
@@ -293,6 +340,30 @@ class HomeCollectionViewController: UICollectionViewController {
                 return cell
             }
         }
+      
+        dataSource.supplementaryViewProvider = { (collectionView, kind, indexPath) in
+            guard let elementKind = SupplementaryView(rawValue: kind) else { return nil }
+ 
+            let view = collectionView.dequeueReusableSupplementaryView(ofKind: elementKind.viewKind, withReuseIdentifier: elementKind.reuseIdentifier, for: indexPath)
+            
+            switch elementKind {
+            case .leaderboardSectionHeader:
+                let header = view as! Habits2.NamedSectionHeaderView
+                header.nameLabel.text = "Leaderboard"
+                header.nameLabel.font = UIFont.preferredFont(forTextStyle: .largeTitle)
+                header.alignLabelToTop()
+                return header
+            case .followedUserSectionHeader:
+                let header = view as! Habits2.NamedSectionHeaderView
+                header.nameLabel.text = "Following"
+                header.nameLabel.font = UIFont.preferredFont(forTextStyle: .title2)
+                header.alignLabelToYCenter()
+                return header
+            default:
+                return nil
+            }
+        }
+        
         return dataSource
     }
     
@@ -314,6 +385,18 @@ class HomeCollectionViewController: UICollectionViewController {
                 leaderBoardverticalTrio.interItemSpacing = .fixed(10)
                 
                 let leaderboardSection = NSCollectionLayoutSection(group: leaderBoardverticalTrio)
+                
+                let headerSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1),
+                    heightDimension: .absolute(88)
+                )
+                let header = NSCollectionLayoutBoundarySupplementaryItem(layoutSize: headerSize, elementKind: SupplementaryView.leaderboardBackground.viewKind, alignment: .top)
+                let background = NSCollectionLayoutDecorationItem.background(elementKind: SupplementaryView.leaderboardBackground.viewKind)
+                
+                leaderboardSection.boundarySupplementaryItems = [header]
+                leaderboardSection.decorationItems = [background]
+                leaderboardSection.supplementariesFollowContentInsets = false
+                
                 leaderboardSection.interGroupSpacing = 20
                 leaderboardSection.orthogonalScrollingBehavior = .continuous
                 leaderboardItem.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 20, trailing: 20)
@@ -324,9 +407,44 @@ class HomeCollectionViewController: UICollectionViewController {
                 let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .estimated(100))
                 let followedUserGroup = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitem: followedUserItem, count: 1)
                 let followedUserSection = NSCollectionLayoutSection(group: followedUserGroup)
+                
+                let headerSize = NSCollectionLayoutSize(
+                    widthDimension: .fractionalWidth(1),
+                    heightDimension: .absolute(60)
+                )
+                let header = NSCollectionLayoutBoundarySupplementaryItem(layoutSize: headerSize, elementKind: SupplementaryView.followedUserSectionHeader.viewKind, alignment: .top)
+                
+                followedUserSection.boundarySupplementaryItems = [header]
+                
                 return followedUserSection
             }
         }
         return layout
+    }
+}
+
+enum SupplementaryItemType {
+    case collectionSuplementaryView
+    case layoutDecorationView
+}
+
+protocol SupplementaryItem {
+    associatedtype ViewClass: UICollectionReusableView
+    
+    var itemType: SupplementaryItemType { get }
+    
+    var reuseIdentifier: String { get }
+    var viewKind: String { get }
+    var viewClass: ViewClass.Type { get }
+}
+
+extension SupplementaryItem {
+    func register(on collectionView: UICollectionView) {
+        switch itemType {
+        case .collectionSuplementaryView:
+            collectionView.register(ViewClass.self, forSupplementaryViewOfKind: viewKind, withReuseIdentifier: reuseIdentifier)
+        case .layoutDecorationView:
+            collectionView.collectionViewLayout.register(ViewClass.self, forDecorationViewOfKind: viewKind)
+        }
     }
 }
