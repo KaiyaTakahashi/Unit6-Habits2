@@ -65,7 +65,15 @@ class UserDetailViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        view.backgroundColor = user.color?.uiColour ?? .white
+        
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.backgroundColor = .quaternarySystemFill
+        tabBarController?.tabBar.scrollEdgeAppearance = tabBarAppearance
+        let navBarAppearance = UINavigationBarAppearance()
+        navBarAppearance.backgroundColor = .quaternarySystemFill
+        navigationController?.navigationBar.scrollEdgeAppearance = navBarAppearance
+        
         userNameLabel.text = user.name
         bioLabel.text = user.bio
         collectionView.register(NamedSectionHeaderView.self, forSupplementaryViewOfKind: SectionHeader.kind.identifier, withReuseIdentifier: SectionHeader.reuse.identifier)

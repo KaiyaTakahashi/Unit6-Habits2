@@ -79,6 +79,10 @@ class UserCollectionViewController: UICollectionViewController {
     func createDataSource() -> DataSourceType {
         dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView, cellProvider: { collectionView, indexPath, itemIdentifier in
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "User", for: indexPath) as! UICollectionViewListCell
+            var backgroundConfiguration = UIBackgroundConfiguration.clear()
+            backgroundConfiguration.backgroundColor = itemIdentifier.user.color?.uiColour ?? UIColor.systemGray4
+            backgroundConfiguration.cornerRadius = 8
+            cell.backgroundConfiguration = backgroundConfiguration
             var content = cell.defaultContentConfiguration()
             content.text = itemIdentifier.user.name
             content.directionalLayoutMargins =

@@ -51,6 +51,34 @@ class LogHabitCollectionViewController: HabitCollectionViewController {
         }
     }
     
+    override func createConfiguration(_ cell: UICollectionViewListCell, withItem item: HabitCollectionViewController.ViewModel.Item) {
+        cell.configurationUpdateHandler = { cell, state in
+            var content = UIListContentConfiguration.cell().updated(for: state)
+            content.text = item.name
+            content.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 11, leading: 8, bottom: 11, trailing: 8)
+            content.textProperties.alignment = .center
+            cell.contentConfiguration = content
+            
+            var backgroundConfiguration = UIBackgroundConfiguration.listPlainCell().updated(for: state)
+            if Settings.shared.favouriteHabits.contains(item) {
+                backgroundConfiguration.backgroundColor = favouriteHabitColour
+            } else {
+                backgroundConfiguration.backgroundColor = .systemGray6
+            }
+            if state.isHighlighted {
+                backgroundConfiguration.backgroundColorTransformer = .init { $0.withAlphaComponent(0.3)}
+            }
+            
+            backgroundConfiguration.cornerRadius = 8
+            cell.backgroundConfiguration = backgroundConfiguration
+        }
+        cell.layer.shadowRadius = 3
+        cell.layer.shadowColor = UIColor.systemGray3.cgColor
+        cell.layer.shadowOffset = CGSize(width: 0, height: 2)
+        cell.layer.shadowOpacity = 1
+        cell.layer.masksToBounds = false
+    }
+    
     override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard let item = dataSource.itemIdentifier(for: indexPath) else { return }
         let loggedHabit = LoggedHabit(userID: Settings.shared.currentUser.id, habitName: item.name, timestamp: Date())

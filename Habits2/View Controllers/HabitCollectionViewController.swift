@@ -8,6 +8,7 @@
 import UIKit
 
 private let reuseIdentifier = "Cell"
+let favouriteHabitColour = UIColor(hue: 0.15, saturation: 1, brightness: 0.9, alpha: 1)
 
 class HabitCollectionViewController: UICollectionViewController {
     typealias DataSource = UICollectionViewDiffableDataSource<ViewModel.Section, ViewModel.Item>
@@ -18,6 +19,18 @@ class HabitCollectionViewController: UICollectionViewController {
     
     enum ViewModel {
         enum Section: Hashable, Comparable {
+            case favorite
+            case category(_ category: Category)
+            
+            var sectionColour: UIColor {
+                switch self {
+                case .favorite:
+                    return favouriteHabitColour
+                case .category(let category):
+                    return category.color.uiColour
+                }
+            }
+            
             // To Sort Section in the order from " .favourite ---> .category "
             static func < (lhs: HabitCollectionViewController.ViewModel.Section, rhs: HabitCollectionViewController.ViewModel.Section) -> Bool {
                 switch (lhs, rhs) {
@@ -29,9 +42,6 @@ class HabitCollectionViewController: UICollectionViewController {
                     return false
                 }
             }
-            
-            case favorite
-            case category(_ category: Category)
         }
         
         typealias Item = Habit
@@ -110,9 +120,8 @@ class HabitCollectionViewController: UICollectionViewController {
     func createDataSource() -> DataSource {
         dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView, cellProvider: { collectionView, indexPath, itemIdentifier in
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Habit", for: indexPath) as! UICollectionViewListCell
-            var content = cell.defaultContentConfiguration()
-            content.text = itemIdentifier.name
-            cell.contentConfiguration = content
+            
+            self.createConfiguration(cell, withItem: itemIdentifier)
             
             return cell
         })
@@ -121,6 +130,7 @@ class HabitCollectionViewController: UICollectionViewController {
         dataSource.supplementaryViewProvider = {(collectionView, kind, indexPath) in
             let header = collectionView.dequeueReusableSupplementaryView(ofKind: SectionHeader.kind.rawValue, withReuseIdentifier: SectionHeader.reuse.rawValue, for: indexPath) as! NamedSectionHeaderView
             let section = self.dataSource.snapshot().sectionIdentifiers[indexPath.section]
+            header.backgroundColor = section.sectionColour
             
             switch section {
             case .favorite:
@@ -132,6 +142,12 @@ class HabitCollectionViewController: UICollectionViewController {
         }
         
         return dataSource
+    }
+    
+    func createConfiguration(_ cell: UICollectionViewListCell, withItem item: ViewModel.Item) {
+        var content = cell.defaultContentConfiguration()
+        content.text = item.name
+        cell.contentConfiguration = content
     }
     
     func createLayout() -> UICollectionViewCompositionalLayout {

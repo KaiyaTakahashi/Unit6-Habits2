@@ -295,11 +295,24 @@ class HomeCollectionViewController: UICollectionViewController {
                 cell.habitNameLabel.text = name
                 cell.leaderLabel.text = leadingUserRanking
                 cell.secondaryLabel.text = secondaryUserRanking
+                cell.contentView.backgroundColor = favouriteHabitColour.withAlphaComponent(0.75)
+                cell.contentView.layer.cornerRadius = 8
+                cell.layer.shadowRadius = 3
+                cell.layer.shadowColor = UIColor.systemGray3.cgColor
+                cell.layer.shadowOffset = CGSize(width: 0, height: 0)
+                cell.layer.shadowOpacity = 1
+                cell.layer.masksToBounds = false
                 return cell
             case .followedUser(let user, let message):
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "FollowedUser", for: indexPath) as! FollowedUserCollectionViewCell
                 cell.primaryTextLabel.text = user.name
                 cell.secondaryTextLabel.text = message
+                
+                if indexPath.item == collectionView.numberOfItems(inSection: indexPath.section) - 1 {
+                    cell.separatorLineView.isHidden = true
+                } else {
+                    cell.separatorLineView.isHidden = false
+                }
                 return cell
             }
         }
@@ -307,10 +320,7 @@ class HomeCollectionViewController: UICollectionViewController {
         dataSource.supplementaryViewProvider = { (collectionView, kind, indexPath) in
             guard let elementKind = SupplementaryView(rawValue: kind) else { return nil }
             let view = collectionView.dequeueReusableSupplementaryView(ofKind: elementKind.viewKind, withReuseIdentifier: elementKind.reuseIdentifier, for: indexPath)
-            print(elementKind.viewKind)
-            print("hi")
-            print(elementKind.reuseIdentifier)
-            print("")
+
             switch elementKind {
             case .leaderboardSectionHeader:
                 let header = view as! NamedSectionHeaderView

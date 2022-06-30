@@ -100,26 +100,37 @@
                                             <nil key="highlightedColor"/>
                                         </label>
                                         <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="249" text="Message" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="99b-89-rb5">
-                                            <rect key="frame" x="24" y="45" width="381" height="98"/>
+                                            <rect key="frame" x="24" y="45" width="381" height="97"/>
                                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                             <nil key="textColor"/>
                                             <nil key="highlightedColor"/>
                                         </label>
+                                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="tc5-AN-Gcr">
+                                            <rect key="frame" x="20.5" y="150" width="372" height="1"/>
+                                            <color key="backgroundColor" systemColor="labelColor"/>
+                                            <constraints>
+                                                <constraint firstAttribute="height" constant="1" id="cNQ-25-lRG"/>
+                                            </constraints>
+                                        </view>
                                     </subviews>
                                     <constraints>
                                         <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="AvV-LW-gPp" secondAttribute="trailing" constant="8" id="1wh-a5-b7C"/>
                                         <constraint firstAttribute="trailing" secondItem="99b-89-rb5" secondAttribute="trailing" constant="8" id="43G-mG-Bn8"/>
                                         <constraint firstItem="AvV-LW-gPp" firstAttribute="leading" secondItem="M5R-tS-eyG" secondAttribute="leading" constant="8" id="BqU-VX-Qja"/>
                                         <constraint firstItem="99b-89-rb5" firstAttribute="leading" secondItem="M5R-tS-eyG" secondAttribute="leading" constant="24" id="P0m-sR-Cly"/>
-                                        <constraint firstAttribute="bottom" secondItem="99b-89-rb5" secondAttribute="bottom" constant="8" id="Wo6-pJ-BlD"/>
+                                        <constraint firstItem="tc5-AN-Gcr" firstAttribute="top" secondItem="99b-89-rb5" secondAttribute="bottom" constant="8" id="UXU-58-XKG"/>
+                                        <constraint firstItem="tc5-AN-Gcr" firstAttribute="centerX" secondItem="M5R-tS-eyG" secondAttribute="centerX" id="dXz-1G-eNY"/>
                                         <constraint firstItem="AvV-LW-gPp" firstAttribute="top" secondItem="M5R-tS-eyG" secondAttribute="top" constant="8" id="fH8-wb-hV0"/>
                                         <constraint firstItem="99b-89-rb5" firstAttribute="top" secondItem="AvV-LW-gPp" secondAttribute="bottom" constant="16" id="gkO-cx-fKl"/>
+                                        <constraint firstItem="tc5-AN-Gcr" firstAttribute="width" secondItem="M5R-tS-eyG" secondAttribute="width" multiplier="0.9" id="iCq-7B-vUM"/>
+                                        <constraint firstItem="tc5-AN-Gcr" firstAttribute="bottom" secondItem="M5R-tS-eyG" secondAttribute="bottom" id="t0u-BK-mrJ"/>
                                     </constraints>
                                 </collectionViewCellContentView>
                                 <size key="customSize" width="413" height="151"/>
                                 <connections>
                                     <outlet property="primaryTextLabel" destination="AvV-LW-gPp" id="otq-Wt-iwO"/>
                                     <outlet property="secondaryTextLabel" destination="99b-89-rb5" id="fbe-uP-UH3"/>
+                                    <outlet property="separatorLineView" destination="tc5-AN-Gcr" id="UmC-xW-cqs"/>
                                 </connections>
                             </collectionViewCell>
                         </cells>
@@ -491,6 +502,9 @@
         <image name="person.2.fill" catalog="system" width="128" height="80"/>
         <image name="person.fill" catalog="system" width="128" height="120"/>
         <image name="star.fill" catalog="system" width="128" height="116"/>
+        <systemColor name="labelColor">
+            <color white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
         <systemColor name="systemBackgroundColor">
             <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
         </systemColor>
